@@ -1,0 +1,138 @@
+# Sistema de Autenticación - WhatsApp Bot
+
+## Archivos Creados
+
+### Frontend
+- **login.php** - Pantalla de inicio de sesión con diseño moderno
+- **registro_empresa.php** - Formulario de registro de empresas (ya existente, mejorado)
+
+### Backend
+- **autenticar.php** - Procesa el login y crea la sesión segura
+- **verificar_usuario.php** - Verifica disponibilidad de nombre de usuario
+- **guardar_empresa.php** - Guarda el registro de nuevas empresas
+- **cerrar_sesion.php** - Cierra la sesión y destruye las cookies
+
+### Utilidades
+- **src/Utils/SessionManager.php** - Clase para gestionar sesiones de forma segura
+
+### Modelos
+- **src/Models/Empresa.php** - Modelo para operaciones con la tabla empresas
+
+## Características de Seguridad
+
+### Sesiones Seguras
+- ✅ Regeneración de ID de sesión al hacer login
+- ✅ Validación de IP del cliente
+- ✅ Timeout de inactividad (30 minutos por defecto)
+- ✅ Cookies con flags HttpOnly, Secure y SameSite
+- ✅ Protección contra fijación de sesión
+- ✅ Protección contra secuestro de sesión
+
+### Contraseñas
+- ✅ Encriptación con bcrypt (cost factor 12)
+- ✅ Validación de requisitos de seguridad:
+  - Mínimo 8 caracteres
+  - Al menos 1 mayúscula
+  - Al menos 1 minúscula
+  - Al menos 1 número
+  - Al menos 1 carácter especial
+
+### Validaciones
+- ✅ Verificación de usuario duplicado en tiempo real
+- ✅ Validación de formato de usuario (alfanumérico, guiones)
+- ✅ Protección contra inyección SQL (prepared statements)
+- ✅ Logging de intentos de login (exitosos y fallidos)
+
+## Flujo de Uso
+
+### 1. Registro de Empresa
+- Acceder a: `http://localhost/whatsapp-bot/public/registro_empresa.php`
+- Completar el formulario con:
+  - Nombre de empresa (obligatorio)
+  - Teléfono de contacto (obligatorio)
+  - Dirección (opcional)
+  - Usuario (obligatorio, único)
+  - Contraseña (obligatoria, debe cumplir requisitos de seguridad)
+- El sistema valida en tiempo real la disponibilidad del usuario
+- Al guardar, la contraseña se encripta con bcrypt
+
+### 2. Inicio de Sesión
+- Acceder a: `http://localhost/whatsapp-bot/public/login.php`
+- Ingresar usuario y contraseña
+- Opcionalmente marcar "Recordar mi sesión" (mantiene sesión por 30 días)
+- Al autenticarse exitosamente, se redirige a dashboard.php
+
+### 3. Dashboard
+- La página dashboard.php está protegida con sesión
+- Si no hay sesión activa, redirige automáticamente a login.php
+- Muestra en el header:
+  - Nombre de usuario
+  - Nombre de empresa
+  - Botón "Cerrar Sesión"
+- Todas las funcionalidades del calendario están disponibles
+
+### 4. Cerrar Sesión
+- Hacer clic en el botón "Cerrar Sesión" en la esquina superior derecha
+- Se destruye la sesión y las cookies
+- Se redirige a login.php con mensaje de confirmación
+
+## Configuración de Timeout
+
+Por defecto, la sesión expira después de 30 minutos de inactividad. Para cambiar este valor:
+
+```php
+SessionManager::setSessionTimeout(3600); // 1 hora en segundos
+```
+
+## Protección de Páginas
+
+Para proteger cualquier página con sesión, agregar al inicio del archivo:
+
+```php
+<?php
+require_once __DIR__ . '/../vendor/autoload.php';
+use App\Utils\SessionManager;
+
+SessionManager::requerirSesion();
+$usuario = SessionManager::obtenerUsuario();
+?>
+```
+
+## Tabla de Base de Datos
+
+```sql
+CREATE TABLE empresas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_empresa VARCHAR(100) NOT NULL DEFAULT '',
+    telefono_contacto VARCHAR(40) NOT NULL DEFAULT '',
+    direccion VARCHAR(150) NOT NULL DEFAULT '',
+    usuario VARCHAR(150) NOT NULL DEFAULT '',
+    password VARCHAR(150) NOT NULL DEFAULT ''
+);
+```
+
+## Testing
+
+Credenciales de prueba creadas:
+- Usuario: `testuser3`
+- Contraseña: `Test123!@#`
+- Empresa: `Empresa Test`
+
+## Seguridad Adicional
+
+### Recomendaciones
+1. Usar HTTPS en producción
+2. Configurar `session.cookie_secure = 1` en php.ini para HTTPS
+3. Implementar rate limiting para intentos de login
+4. Agregar CAPTCHA después de múltiples intentos fallidos
+5. Implementar autenticación de dos factores (2FA)
+6. Registrar y monitorear logs de acceso
+
+### Logging
+El sistema registra:
+- Intentos de login exitosos (con usuario e IP)
+- Intentos de login fallidos (con usuario e IP)
+- Cierres de sesión
+- Intentos de secuestro de sesión detectados
+
+Los logs se guardan en el archivo de error de PHP configurado en el servidor.

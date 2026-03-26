@@ -1,0 +1,2 @@
+En una terminal abierta desde el Proyecto, aplicar el siguiente commando:
+composer require google/apiclient

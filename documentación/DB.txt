@@ -1,0 +1,67 @@
+CREATE DATABASE whatsapp_agenda;
+USE whatsapp_agenda;
+
+CREATE TABLE citas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  idEmpresa INT NOT NULL DEFAULT 0,
+  telefono_usuario VARCHAR(40),
+  fecha_inicio DATETIME,
+  servicio VARCHAR(100),
+  recordatorio_enviado TINYINT DEFAULT 0,
+  estado ENUM ('activa', 'cancelada', 'atendida', 'esperando_fecha') DEFAULT 'activa',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- INSERT INTO citas VALUES (1, 1, 'whatsapp:+12247757725', '2026-01-10 18:00:00', 'recorte de cejas', 0, 'activa', '2026-01-10 12:33:21');
+-- ALTER TABLE citas ADD estado ENUM ('activa', 'cancelada', 'atendida', 'esperando_fecha') DEFAULT 'activa';
+
+CREATE TABLE conversaciones (
+  telefono VARCHAR(40) PRIMARY KEY,
+  estado VARCHAR(50),
+  fecha_propuesta DATETIME,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ALTER TABLE conversaciones
+-- ADD fecha_propuesta DATETIME;
+
+
+CREATE TABLE empresas (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre_empresa VARCHAR(100) NOT NULL,
+    codigo_empresa VARCHAR(50) NOT NULL,
+    telefono_contacto VARCHAR(20) NOT NULL DEFAULT '',
+    telefono_twilio VARCHAR(40) NOT NULL DEFAULT '',
+    direccion VARCHAR(255) NOT NULL DEFAULT '',
+    usuario VARCHAR(100) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY uk_codigo_empresa (codigo_empresa),
+    UNIQUE KEY uk_usuario (usuario),
+    INDEX idx_nombre_empresa (nombre_empresa)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE horarios (
+	idEmpresa INT NOT NULL DEFAULT 0,
+	lunes_apertura TIME NOT NULL DEFAULT '00:00:00',
+	lunes_cierre TIME NOT NULL DEFAULT '00:00:00',
+	martes_apertura TIME NOT NULL DEFAULT '00:00:00',
+	martes_cierre TIME NOT NULL DEFAULT '00:00:00',
+	miercoles_apertura TIME NOT NULL DEFAULT '00:00:00',
+	miercoles_cierre TIME NOT NULL DEFAULT '00:00:00',
+	jueves_apertura TIME NOT NULL DEFAULT '00:00:00',
+	jueves_cierre TIME NOT NULL DEFAULT '00:00:00',
+	viernes_apertura TIME NOT NULL DEFAULT '00:00:00',
+	viernes_cierre TIME NOT NULL DEFAULT '00:00:00',
+	sabado_apertura TIME NOT NULL DEFAULT '00:00:00',
+	sabado_cierre TIME NOT NULL DEFAULT '00:00:00',
+	domingo_apertura TIME NOT NULL DEFAULT '00:00:00',
+	domingo_cierre TIME NOT NULL DEFAULT '00:00:00',
+	primer_cita TIME NOT NULL DEFAULT '00:00:00',
+	ultima_cita TIME NOT NULL DEFAULT '00:00:00',
+	tiempo_atencion TIME NOT NULL DEFAULT '00:00:00'
+);
+
+-- ALTER TABLE citas ADD COLUMN idEmpresa INT NOT NULL DEFAULT 0;

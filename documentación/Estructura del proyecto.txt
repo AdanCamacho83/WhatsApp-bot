@@ -1,0 +1,13 @@
+whatsapp-bot/
+│
+├── keys/            
+│   └── calendar.json
+|
+├── logs/
+│   ├── .htaccess
+│   └── mensajes.log
+│
+├── public/
+│   └── index.php
+│
+└── vendor 

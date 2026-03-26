@@ -1,0 +1,16 @@
+Crear proyecto en Google Cloud Console
+1. Ir a google Cloud
+2. Crear nuevo proyecto 'whatsapp-agenda
+3. Entrar en el proyecto -> en la parte superior izquierda aparece el nombre, dar clic y posteriormente clic en la lista con el nombre del proyecto
+4. Buscar: 'APIs y Servicios'  -->  'Google Calendar API'   -->  Habilitar
+5. Ir a 'Credenciales'  -->  '+ Crear Credenciales'  -->  'Cuenta de servicio' -->  'Crear cuenta de servicio'  -->  Crear y continuar
+6. En Keys  -->  Add Key  --> JSON  --> descargar el archivo y renombrarlo como calendar.json
+7. Abrir el archivo calendar.json y buscar 'client_email' y copiar el correo que ahí viene. En este caso es el: calendar-bot-6@whatsapp-agenda-482217.iam.gserviceaccount.com
+ 
+
+Crear calendario en Google Calendar
+1. Ir a google Calendar y en Otros Calendarios  --> Crear Calendario, Asínale un nombre (ej. "Citas Barbería") y haz clic en Crear calendario.
+2. Una vez creado, buscar el calendario y en los 3 puntos dar clic en 'Configurar y Compartir'
+3. Buscar 'Compartido con' y dar clic en el botón 'Añadir personas y grupos' pegar el correo calendar-bot-6@whatsapp-agenda-482217.iam.gserviceaccount.com que copiamos el punto 7 al Crear Proyecto en Google Cloud, elegimos la opción 'Hacer cambios y gestionar el uso compartido' y guardamos
+4. Ir a la sección 'Integrar el calendario' y en el apartado 'ID del calendario' copiamos el correo ahí registrado. Ej. 2aa22ca8a0fa8192046daa7b793c053267c36f7bf1461544adb36e8ce2b23ea6@group.calendar.google.com
+5. Abrimos el código fuente en PHP y pegamos el correo copiado en el paso anterior en la parte del calendar ID

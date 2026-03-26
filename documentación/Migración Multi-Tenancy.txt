@@ -1,0 +1,96 @@
+# Migración: Agregar campo idEmpresa a tabla citas
+
+## Cambios realizados en la base de datos
+
+Se agregó el campo `idEmpresa` a la tabla `citas` para soportar multi-tenancy (múltiples empresas).
+
+### Estructura actualizada de la tabla citas:
+
+```sql
+CREATE TABLE citas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  idEmpresa INT NOT NULL DEFAULT 0,
+  telefono_usuario VARCHAR(40),
+  fecha_inicio DATETIME,
+  servicio VARCHAR(100),
+  recordatorio_enviado TINYINT DEFAULT 0,
+  estado ENUM ('activa', 'cancelada', 'atendida', 'esperando_fecha') DEFAULT 'activa',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Script de migración (si ya tienes datos):
+
+Si ya tienes citas existentes en la tabla y quieres asignarlas a una empresa específica:
+
+```sql
+-- 1. Agregar el campo idEmpresa (si aún no existe)
+ALTER TABLE citas ADD COLUMN idEmpresa INT NOT NULL DEFAULT 0 AFTER id;
+
+-- 2. Actualizar citas existentes para asignarlas a la empresa con ID 1
+-- (Reemplaza el 1 con el ID de la empresa que corresponda)
+UPDATE citas SET idEmpresa = 1 WHERE idEmpresa = 0;
+
+-- 3. (Opcional) Agregar índice para mejorar rendimiento
+CREATE INDEX idx_idEmpresa ON citas(idEmpresa);
+CREATE INDEX idx_idEmpresa_estado ON citas(idEmpresa, estado);
+```
+
+## Cambios en el código
+
+### Archivos modificados:
+
+1. **src/Models/Cita.php**
+   - Método `crear()`: Ahora requiere parámetro `$idEmpresa`
+   - Método `obtenerActiva()`: Filtro opcional por `$idEmpresa`
+   - Método `obtenerTodas()`: Filtro opcional por `$idEmpresa`
+   - Método `obtenerPorRango()`: Filtro opcional por `$idEmpresa`
+   - Método `obtenerPorId()`: Filtro opcional por `$idEmpresa`
+
+2. **public/citas.php**
+   - Protegido con sesión
+   - Filtra citas solo de la empresa del usuario logueado
+
+3. **public/crear_cita_dashboard.php**
+   - Protegido con sesión
+   - Guarda citas con el `idEmpresa` del usuario logueado
+
+4. **public/reprogramar.php**
+   - Protegido con sesión
+   - Solo permite reprogramar citas de la empresa del usuario logueado
+
+5. **public/cancelar_cita.php**
+   - Protegido con sesión
+   - Solo permite cancelar citas de la empresa del usuario logueado
+
+## Comportamiento del sistema
+
+### Antes de los cambios:
+- Todas las empresas veían todas las citas en el calendario
+- Cualquier empresa podía crear/editar/cancelar cualquier cita
+
+### Después de los cambios:
+- ✅ Cada empresa solo ve sus propias citas en el calendario
+- ✅ Cada empresa solo puede crear citas asociadas a su cuenta
+- ✅ Cada empresa solo puede editar/cancelar sus propias citas
+- ✅ Protección a nivel de sesión y base de datos
+- ✅ Intentar acceder a citas de otra empresa devuelve "Cita no encontrada o no tienes permiso"
+
+## Notas de seguridad
+
+- Todos los endpoints del dashboard ahora requieren sesión activa
+- Los filtros por `idEmpresa` previenen que una empresa acceda a datos de otra
+- Los intentos de acceso no autorizado son registrados automáticamente por la clase SessionManager
+- Se recomienda agregar índices en la base de datos para mejorar el rendimiento con grandes volúmenes de datos
+
+## Testing
+
+Para probar el multi-tenancy:
+
+1. Crear dos empresas diferentes (empresa A y empresa B)
+2. Iniciar sesión con empresa A y crear varias citas
+3. Cerrar sesión e iniciar sesión con empresa B
+4. Verificar que el calendario de empresa B esté vacío
+5. Crear citas con empresa B
+6. Verificar que cada empresa solo ve sus propias citas
+7. Intentar editar una cita obteniendo su ID de la base de datos pero estando logueado con otra empresa (debe fallar)

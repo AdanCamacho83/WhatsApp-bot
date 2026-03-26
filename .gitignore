@@ -1,0 +1,29 @@
+# Composer
+/vendor/
+composer.lock
+
+# Logs
+/logs/*.log
+
+# Credenciales
+/keys/*.json
+/config/config.php
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporal
+*.tmp
+*.temp

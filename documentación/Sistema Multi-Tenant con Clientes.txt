@@ -1,0 +1,206 @@
+# Sistema Multi-Tenant con Tabla de Clientes
+
+## Problema Original
+
+Cuando un cliente envía un mensaje por WhatsApp al número del sandbox de Twilio (+14155238886), el sistema no sabía a qué empresa pertenecía ese cliente, ya que **todas las empresas usan el mismo número del sandbox**.
+
+## Solución Implementada: Tabla de Clientes
+
+### 1. Nueva tabla `clientes`
+
+Relaciona cada teléfono de cliente con su empresa correspondiente:
+
+```sql
+CREATE TABLE IF NOT EXISTS clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    idEmpresa INT NOT NULL,
+    telefono_usuario VARCHAR(40) NOT NULL,
+    nombre_cliente VARCHAR(100) DEFAULT '',
+    email VARCHAR(100) DEFAULT '',
+    activo TINYINT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    UNIQUE KEY unique_telefono_empresa (telefono_usuario, idEmpresa),
+    INDEX idx_telefono (telefono_usuario),
+    INDEX idx_idEmpresa (idEmpresa),
+    FOREIGN KEY (idEmpresa) REFERENCES empresas(id) ON DELETE CASCADE
+);
+```
+
+### 2. Flujo del Sistema
+
+#### A) Registro de Cliente (Desde Dashboard):
+1. La empresa inicia sesión en el dashboard
+2. Crea una cita para un cliente (teléfono + servicio + fecha)
+3. **Automáticamente** el sistema registra ese teléfono en la tabla `clientes` asociado a la empresa
+4. El teléfono queda vinculado a esa empresa
+
+#### B) Cliente Envía Mensaje por WhatsApp:
+1. Cliente envía mensaje a `whatsapp:+14155238886`
+2. El sistema busca en la tabla `clientes` a qué empresa pertenece ese teléfono
+3. Si el teléfono está registrado:
+   - Se procesa normalmente la solicitud
+   - Las citas se crean con el `idEmpresa` correcto
+   - Solo ve/modifica citas de su empresa
+4. Si el teléfono NO está registrado:
+   - Se envía mensaje: "Tu número no está registrado. Contacta a la empresa para que te registren."
+
+#### C) Ventajas:
+- ✅ Cada empresa administra sus propios clientes
+- ✅ Un cliente puede estar registrado con múltiples empresas
+- ✅ Seguridad: un cliente solo ve/modifica citas de la empresa que lo registró
+- ✅ Fácil gestión desde el dashboard
+
+## Archivos Creados/Modificados
+
+### Archivos Nuevos:
+1. **src/Models/Cliente.php** - Modelo para gestionar clientes
+2. **documentación/tabla_clientes.sql** - Script SQL para crear la tabla
+
+### Archivos Modificados:
+1. **src/Controllers/WhatsAppController.php**
+   - Verifica si el cliente está registrado
+   - Rechaza mensajes de números no registrados
+   - Usa `idEmpresa` del cliente al crear citas
+
+2. **public/crear_cita_dashboard.php**
+   - Auto-registra clientes al crear citas desde dashboard
+   - Vincula teléfono con empresa automáticamente
+
+3. **src/Models/Cita.php**
+   - Método `crear()` ahora requiere `idEmpresa`
+
+## Instalación
+
+### 1. Ejecutar SQL:
+```sql
+-- Crear tabla clientes
+CREATE TABLE IF NOT EXISTS clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    idEmpresa INT NOT NULL,
+    telefono_usuario VARCHAR(40) NOT NULL,
+    nombre_cliente VARCHAR(100) DEFAULT '',
+    email VARCHAR(100) DEFAULT '',
+    activo TINYINT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_telefono_empresa (telefono_usuario, idEmpresa),
+    INDEX idx_telefono (telefono_usuario),
+    INDEX idx_idEmpresa (idEmpresa),
+    FOREIGN KEY (idEmpresa) REFERENCES empresas(id) ON DELETE CASCADE
+);
+
+-- Registrar clientes existentes (si ya tienes citas)
+-- Esto asigna todas las citas existentes a la empresa con ID 1
+INSERT INTO clientes (idEmpresa, telefono_usuario)
+SELECT DISTINCT 1, telefono_usuario
+FROM citas
+WHERE telefono_usuario IS NOT NULL
+ON DUPLICATE KEY UPDATE activo = 1;
+```
+
+### 2. Verificar que todo funciona:
+```sql
+-- Ver clientes por empresa
+SELECT 
+    e.nombre_empresa,
+    c.telefono_usuario,
+    c.nombre_cliente,
+    COUNT(ci.id) as total_citas
+FROM empresas e
+LEFT JOIN clientes c ON e.id = c.idEmpresa
+LEFT JOIN citas ci ON c.telefono_usuario = ci.telefono_usuario AND ci.idEmpresa = e.id
+GROUP BY e.id, c.id;
+```
+
+## Uso del Sistema
+
+### Para Empresas:
+
+1. **Registrar nuevo cliente**:
+   - Simplemente crea una cita desde el dashboard
+   - El cliente se registra automáticamente
+
+2. **Ver clientes registrados**:
+   ```php
+   $clienteModel = new Cliente();
+   $clientes = $clienteModel->obtenerPorEmpresa($idEmpresa);
+   ```
+
+3. **Gestionar clientes**:
+   - Actualizar información
+   - Desactivar/activar
+   - Buscar por nombre o teléfono
+
+### Para Clientes:
+
+1. **Primera vez**:
+   - La empresa debe crear su primera cita desde el dashboard
+   - Esto registra automáticamente el teléfono
+
+2. **Después del registro**:
+   - El cliente puede enviar mensajes al WhatsApp
+   - Todas las funciones están disponibles (crear, reprogramar, cancelar)
+
+3. **Si no está registrado**:
+   - Recibe mensaje indicando que debe contactar a la empresa
+
+## Casos de Uso
+
+### Caso 1: Cliente Nuevo
+```
+Dashboard → Nueva cita → Teléfono: whatsapp:+521234567890
+                       → Automáticamente se registra en tabla clientes
+                       → Cliente puede usar WhatsApp desde ahora
+```
+
+### Caso 2: Cliente Envía Mensaje
+```
+WhatsApp → Mensaje de whatsapp:+521234567890
+        → Sistema busca: SELECT * FROM clientes WHERE telefono_usuario = '...'
+        → Encuentra empresa → Procesa mensaje normalmente
+```
+
+### Caso 3: Número No Registrado
+```
+WhatsApp → Mensaje de número desconocido
+        → Sistema busca: SELECT * FROM clientes WHERE telefono_usuario = '...'
+        → No encuentra → Envía mensaje de error
+```
+
+### Caso 4: Cliente en Múltiples Empresas
+```
+- Empresa A registra whatsapp:+521234567890
+- Empresa B registra el mismo número
+- Resultado: Cliente puede tener citas independientes con ambas empresas
+- Cada empresa solo ve sus propias citas con ese cliente
+```
+
+## Seguridad
+
+- ✅ Un cliente solo puede acceder a citas de la empresa que lo registró
+- ✅ Números no registrados son rechazados automáticamente
+- ✅ Cada empresa administra sus propios clientes
+- ✅ Relación con clave foránea previene inconsistencias
+- ✅ Soft delete (campo `activo`) permite reactivar clientes
+
+## Próximas Mejoras (Opcional)
+
+1. **Panel de Gestión de Clientes en Dashboard**:
+   - Ver lista de clientes
+   - Editar información
+   - Desactivar/activar
+   - Estadísticas de citas por cliente
+
+2. **Importación Masiva**:
+   - CSV con teléfonos y nombres
+   - Registro en lote
+
+3. **Historial de Cliente**:
+   - Ver todas las citas de un cliente
+   - Notas y comentarios
+
+4. **Notificaciones Automáticas**:
+   - Dar de alta nuevos clientes automáticamente al recibir primer mensaje
+   - Notificar a la empresa cuando un nuevo número intenta contactar

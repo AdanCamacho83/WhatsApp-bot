@@ -1,0 +1,304 @@
+# Solución al Problema Multi-Tenant con Sandbox de Twilio
+
+## El Problema
+
+**Pregunta:** ¿Cómo distinguir a qué empresa pertenece cada cliente si Twilio solo da 1 número en sandbox?
+
+**Respuesta:** Twilio Sandbox solo proporciona **1 número** (+14155238886) que es **compartido** por todas tus empresas.
+
+### ❌ Lo que NO es posible en Sandbox:
+- Tener un número diferente por empresa
+- Identificar automáticamente la empresa por el número
+
+### ✅ Lo que SÍ es posible:
+
+---
+
+## Solución Implementada: Sistema de Códigos Únicos
+
+### 📋 Cómo Funciona:
+
+1. **Cada empresa tiene un código único:**
+   - Ejemplo: `BARBER123`, `SALON456`, `SPARELA789`
+   - Se genera automáticamente o se asigna manualmente
+
+2. **Primera vez (Registro):**
+   - Cliente envía: `"BARBER123 Hola, quiero una cita"`
+   - Sistema extrae el código `BARBER123`
+   - Busca en BD qué empresa tiene ese código
+   - Registra en tabla `clientes`: `telefono → idEmpresa`
+   - Responde: "✅ Registro exitoso en Barbería El Rey"
+
+3. **Después del registro:**
+   - Cliente envía: `"Quiero cancelar mi cita"`
+   - Sistema busca en tabla `clientes` a qué empresa pertenece
+   - Ya NO necesita enviar el código nuevamente
+   - Procesa normalmente con el `idEmpresa` guardado
+
+---
+
+## Estructura de Base de Datos
+
+### 1. Tabla `empresas` (Actualizada):
+```sql
+CREATE TABLE empresas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    codigo VARCHAR(20) UNIQUE,           -- ← NUEVO: Código único
+    nombre_empresa VARCHAR(100),
+    telefono_contacto VARCHAR(40),
+    direccion VARCHAR(150),
+    usuario VARCHAR(150),
+    password VARCHAR(150)
+);
+```
+
+### 2. Tabla `clientes`:
+```sql
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    idEmpresa INT NOT NULL,
+    telefono_usuario VARCHAR(40) NOT NULL,
+    nombre_cliente VARCHAR(100),
+    UNIQUE KEY (telefono_usuario, idEmpresa)
+);
+```
+
+### 3. Tabla `citas` (Multi-tenant):
+```sql
+CREATE TABLE citas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    idEmpresa INT NOT NULL,              -- Identifica la empresa
+    telefono_usuario VARCHAR(40),
+    fecha_inicio DATETIME,
+    servicio VARCHAR(100),
+    estado ENUM('activa', 'cancelada')
+);
+```
+
+---
+
+## Flujo Completo del Sistema
+
+### Escenario 1: Cliente Nuevo (Primera Vez)
+
+```
+1. Empresa "Barbería El Rey" tiene código: BARBER123
+
+2. Cliente envía WhatsApp:
+   → "BARBER123 Hola, quiero una cita para mañana"
+   
+3. Sistema:
+   → Extrae código: "BARBER123"
+   → Busca en tabla empresas: SELECT * WHERE codigo='BARBER123'
+   → Encuentra: idEmpresa = 1
+   → Registra en tabla clientes:
+     INSERT INTO clientes (idEmpresa, telefono_usuario) 
+     VALUES (1, 'whatsapp:+5215551234567')
+   
+4. Responde:
+   → "✅ Registro exitoso en Barbería El Rey"
+   → "Ahora puedes agendar citas..."
+```
+
+### Escenario 2: Cliente Ya Registrado
+
+```
+1. Cliente envía:
+   → "Quiero reprogramar mi cita"
+   
+2. Sistema:
+   → Busca en tabla clientes: 
+     SELECT idEmpresa FROM clientes WHERE telefono_usuario='whatsapp:+5215551234567'
+   → Encuentra: idEmpresa = 1
+   → Procesa mensaje normalmente con idEmpresa=1
+   
+3. Responde:
+   → "¿Para qué fecha te gustaría reprogramar?"
+```
+
+### Escenario 3: Código Inválido
+
+```
+1. Cliente envía:
+   → "INVALIDO999 Quiero una cita"
+   
+2. Sistema:
+   → Extrae código: "INVALIDO999"
+   → Busca en tabla empresas: No encuentra nada
+   → No registra nada
+   
+3. Responde:
+   → "🚫 No pudimos identificar tu empresa"
+   → "Contacta a la empresa para obtener tu código..."
+```
+
+---
+
+## Instalación
+
+### Paso 1: Actualizar Base de Datos
+```sql
+-- Agregar campo codigo a empresas
+ALTER TABLE empresas 
+ADD COLUMN codigo VARCHAR(20) DEFAULT NULL AFTER id,
+ADD UNIQUE INDEX idx_codigo (codigo);
+
+-- Asignar códigos a empresas existentes
+UPDATE empresas SET codigo = 'BARBER123' WHERE id = 1;
+UPDATE empresas SET codigo = 'SALON456' WHERE id = 2;
+
+-- Crear tabla clientes (si no existe)
+CREATE TABLE IF NOT EXISTS clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    idEmpresa INT NOT NULL,
+    telefono_usuario VARCHAR(40) NOT NULL,
+    nombre_cliente VARCHAR(100) DEFAULT '',
+    activo TINYINT DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY (telefono_usuario, idEmpresa),
+    FOREIGN KEY (idEmpresa) REFERENCES empresas(id) ON DELETE CASCADE
+);
+```
+
+### Paso 2: Archivos Creados
+- ✅ `src/Utils/EmpresaCodeManager.php` - Gestión de códigos
+- ✅ `src/Models/Cliente.php` - Modelo de clientes
+- ✅ `src/Controllers/WhatsAppController.php` - Actualizado con lógica de códigos
+
+---
+
+## Uso del Sistema
+
+### Para ti (Proveedor del Servicio):
+
+**1. Asignar código a nueva empresa:**
+```sql
+-- Al crear empresa, asignar código único
+INSERT INTO empresas (codigo, nombre_empresa, ...) 
+VALUES ('BARBER123', 'Barbería El Rey', ...);
+```
+
+**2. Ver códigos de empresas:**
+```sql
+SELECT id, nombre_empresa, codigo, usuario FROM empresas;
+```
+
+**3. Cambiar código de una empresa:**
+```sql
+UPDATE empresas SET codigo = 'NUEVO123' WHERE id = 1;
+```
+
+### Para tus Empresas (Clientes):
+
+**1. Reciben su código:**
+- Tú les proporcionas: `"Tu código es BARBER123"`
+
+**2. Comparten con sus clientes:**
+- Pueden imprimir tarjetas, folletos, etc:
+  ```
+  📱 Agenda tu cita por WhatsApp
+  +1 (415) 523-8886
+  
+  Código: BARBER123
+  
+  Envía: "BARBER123 Quiero una cita"
+  ```
+
+**3. También pueden registrar desde dashboard:**
+- Empresa hace login en dashboard
+- Crea cita para cliente nuevo
+- Cliente queda registrado automáticamente
+
+### Para Clientes Finales:
+
+**1. Primera vez:**
+```
+Envía al +1 (415) 523-8886:
+"BARBER123 Hola, quiero una cita"
+```
+
+**2. Siguientes veces:**
+```
+Envía al +1 (415) 523-8886:
+"Quiero cancelar mi cita"
+(Ya no necesita código)
+```
+
+---
+
+## Ventajas de Esta Solución
+
+✅ **Funciona con Sandbox** (Gratis, sin necesidad de números dedicados)
+✅ **Una vez registrado, experiencia fluida** (No requiere código después)
+✅ **Fácil de compartir** (Código simple que empresas pueden imprimir)
+✅ **Auto-registro** (Cliente se registra solo, sin intervención)
+✅ **Seguro** (Cada empresa tiene su código único)
+✅ **Escalable** (Puedes tener infinitas empresas)
+
+---
+
+## Desventajas
+
+❌ Cliente debe usar el código la primera vez
+❌ Si olvida el código, debe contactar a la empresa
+❌ Menos profesional que números dedicados
+
+---
+
+## Alternativas (Para Producción)
+
+### Opción 1: WhatsApp Business API con Números Dedicados
+
+**Cómo funciona:**
+- Cada empresa tiene su propio número de WhatsApp
+- Identificación automática por número
+
+**Requisitos:**
+- Cuenta WhatsApp Business API
+- ~$50-150 USD/mes por número
+- Proceso de aprobación con Meta/Facebook
+
+**Proveedores:**
+- Twilio (plan empresarial)
+- 360dialog
+- MessageBird
+- Vonage
+
+---
+
+## Próximos Pasos Recomendados
+
+1. **Implementar generador automático de códigos en dashboard**
+   - Al crear empresa, generar código único
+   - Mostrar código en pantalla para que puedan compartir
+
+2. **Crear página de bienvenida con código**
+   - Cada empresa puede compartir un link
+   - Ejemplo: `tuapp.com/bienvenida/BARBER123`
+   - Muestra instrucciones de uso
+
+3. **Exportar credenciales para imprimir**
+   - PDF con código QR y número de WhatsApp
+   - Empresas pueden imprimir y pegar en local
+
+4. **Panel de gestión de clientes**
+   - Ver qué clientes se han registrado
+   - Estadísticas de registro
+
+---
+
+## Resumen
+
+**Tu pregunta original:** 
+> ¿Cómo distinguir a qué empresa pertenece cada cliente con un solo número de Twilio?
+
+**Respuesta:**
+- Twilio Sandbox = 1 solo número para todas las empresas
+- Solución: **Sistema de códigos únicos** por empresa
+- Cliente envía código la primera vez
+- Sistema lo registra automáticamente
+- Después, ya no necesita código
+
+**¿Es la mejor solución?**
+- ✅ Para **Sandbox/Testing**: Sí, es la mejor solución
+- ❌ Para **Producción profesional**: Mejor usar números dedicados ($$)
