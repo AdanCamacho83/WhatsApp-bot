@@ -18,6 +18,17 @@ module.exports = function appointmentRoutes(db) {
     next();
   }
 
+  function ensureIntParam(paramName) {
+    return (req, res, next) => {
+      const val = parseInt(req.params[paramName], 10);
+      if (isNaN(val) || val <= 0) {
+        return res.status(400).json({ error: `Parámetro '${paramName}' debe ser un número entero positivo` });
+      }
+      req.params[paramName] = val;
+      next();
+    };
+  }
+
   router.get('/', ensureTenant, (req, res) => {
     const { status, date } = req.query;
     res.json(appointments.findByTenant(req.tenant.id, { status, date }));
@@ -50,7 +61,7 @@ module.exports = function appointmentRoutes(db) {
     res.status(201).json(appt);
   });
 
-  router.get('/:appointmentId', ensureTenant, (req, res) => {
+  router.get('/:appointmentId', ensureTenant, ensureIntParam('appointmentId'), (req, res) => {
     const appt = appointments.findById(req.params.appointmentId);
     if (!appt || appt.tenant_id !== req.tenant.id) {
       return res.status(404).json({ error: 'Cita no encontrada' });
@@ -58,7 +69,7 @@ module.exports = function appointmentRoutes(db) {
     res.json(appt);
   });
 
-  router.put('/:appointmentId', ensureTenant, (req, res) => {
+  router.put('/:appointmentId', ensureTenant, ensureIntParam('appointmentId'), (req, res) => {
     const appt = appointments.findById(req.params.appointmentId);
     if (!appt || appt.tenant_id !== req.tenant.id) {
       return res.status(404).json({ error: 'Cita no encontrada' });
@@ -67,7 +78,7 @@ module.exports = function appointmentRoutes(db) {
     res.json(updated);
   });
 
-  router.patch('/:appointmentId/estado', ensureTenant, (req, res) => {
+  router.patch('/:appointmentId/estado', ensureTenant, ensureIntParam('appointmentId'), (req, res) => {
     const appt = appointments.findById(req.params.appointmentId);
     if (!appt || appt.tenant_id !== req.tenant.id) {
       return res.status(404).json({ error: 'Cita no encontrada' });
@@ -81,7 +92,7 @@ module.exports = function appointmentRoutes(db) {
     res.json(updated);
   });
 
-  router.delete('/:appointmentId', ensureTenant, (req, res) => {
+  router.delete('/:appointmentId', ensureTenant, ensureIntParam('appointmentId'), (req, res) => {
     const appt = appointments.findById(req.params.appointmentId);
     if (!appt || appt.tenant_id !== req.tenant.id) {
       return res.status(404).json({ error: 'Cita no encontrada' });

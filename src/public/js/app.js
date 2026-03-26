@@ -83,7 +83,9 @@ function renderTenants(tenants) {
       <td>${escHtml(t.phone)}</td>
       <td>${escHtml(t.timezone)}</td>
       <td>
-        <button class="btn btn-danger btn-sm" onclick="deleteTenant(${t.id}, '${escAttr(t.name)}')"
+        <button class="btn btn-danger btn-sm js-delete-tenant"
+                data-id="${t.id}"
+                data-name="${escAttr(t.name)}"
                 aria-label="Eliminar empresa ${escAttr(t.name)}">
           Eliminar
         </button>
@@ -91,6 +93,14 @@ function renderTenants(tenants) {
     </tr>
   `).join('');
 }
+
+document.getElementById('tbody-empresas').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.js-delete-tenant');
+  if (!btn) return;
+  const id   = btn.dataset.id;
+  const name = btn.dataset.name;
+  await deleteTenant(id, name);
+});
 
 async function deleteTenant(id, name) {
   if (!confirm(`¿Eliminar la empresa "${name}"? Esta acción no se puede deshacer.`)) return;
@@ -173,8 +183,9 @@ function renderCitas(citas, tenantId) {
       <td>${statusBadge(c.status)}</td>
       <td>
         ${c.status !== 'cancelled' && c.status !== 'completed' ? `
-          <button class="btn btn-danger btn-sm"
-                  onclick="cancelCita(${c.id}, ${tenantId})"
+          <button class="btn btn-danger btn-sm js-cancel-cita"
+                  data-id="${c.id}"
+                  data-tenant="${tenantId}"
                   aria-label="Cancelar cita #${c.id} de ${escAttr(c.client_name)}">
             Cancelar
           </button>` : ''}
@@ -182,6 +193,12 @@ function renderCitas(citas, tenantId) {
     </tr>
   `).join('');
 }
+
+document.getElementById('tbody-citas').addEventListener('click', async (e) => {
+  const btn = e.target.closest('.js-cancel-cita');
+  if (!btn) return;
+  await cancelCita(btn.dataset.id, btn.dataset.tenant);
+});
 
 async function cancelCita(id, tenantId) {
   if (!confirm(`¿Cancelar la cita #${id}?`)) return;
@@ -249,7 +266,12 @@ function escHtml(str) {
 
 function escAttr(str) {
   if (str == null) return '';
-  return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 /* ──────────────────────────────────────────────
