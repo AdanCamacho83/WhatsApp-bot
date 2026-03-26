@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Panel de administración del sistema de citas WhatsApp" />
+  <title>WhatsApp Bot — Gestión de Citas</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+  <header role="banner">
+    <div class="header-inner">
+      <img src="/img/logo.svg" alt="" aria-hidden="true" width="36" height="36" onerror="this.style.display='none'" />
+      <h1>WhatsApp Bot — Gestión de Citas</h1>
+    </div>
+    <nav aria-label="Navegación principal">
+      <ul role="list">
+        <li><a href="#empresas" aria-current="page">Empresas</a></li>
+        <li><a href="#citas">Citas</a></li>
+        <li><a href="#clientes">Clientes</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <!-- Empresas -->
+    <section id="empresas" aria-labelledby="empresas-heading">
+      <h2 id="empresas-heading">Empresas registradas</h2>
+
+      <div class="card">
+        <h3>Agregar empresa</h3>
+        <form id="form-empresa" novalidate>
+          <div class="field">
+            <label for="empresa-nombre">Nombre <span aria-hidden="true">*</span></label>
+            <input id="empresa-nombre" name="name" type="text" required autocomplete="organization"
+                   aria-required="true" aria-describedby="empresa-nombre-hint" />
+            <p id="empresa-nombre-hint" class="hint">Nombre comercial de la empresa.</p>
+          </div>
+          <div class="field">
+            <label for="empresa-telefono">Teléfono WhatsApp <span aria-hidden="true">*</span></label>
+            <input id="empresa-telefono" name="phone" type="tel" required autocomplete="tel"
+                   aria-required="true" aria-describedby="empresa-telefono-hint"
+                   placeholder="521234567890" />
+            <p id="empresa-telefono-hint" class="hint">Número completo con código de país (sin +).</p>
+          </div>
+          <div class="field">
+            <label for="empresa-email">Correo electrónico</label>
+            <input id="empresa-email" name="email" type="email" autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="empresa-timezone">Zona horaria</label>
+            <select id="empresa-timezone" name="timezone">
+              <option value="America/Mexico_City">Ciudad de México (CST/CDT)</option>
+              <option value="America/Monterrey">Monterrey (CST/CDT)</option>
+              <option value="America/Tijuana">Tijuana (PST/PDT)</option>
+              <option value="America/Bogota">Bogotá (COT)</option>
+              <option value="America/Lima">Lima (PET)</option>
+              <option value="America/Santiago">Santiago (CLT)</option>
+              <option value="America/Buenos_Aires">Buenos Aires (ART)</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Guardar empresa</button>
+          </div>
+          <p id="form-empresa-status" role="status" aria-live="polite" class="sr-only"></p>
+        </form>
+      </div>
+
+      <div class="card" id="card-lista-empresas">
+        <h3>Lista de empresas</h3>
+        <div id="status-empresas" role="status" aria-live="polite" aria-atomic="true"></div>
+        <table id="tabla-empresas" aria-label="Empresas registradas">
+          <caption class="sr-only">Listado de empresas con opciones de gestión</caption>
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Nombre</th>
+              <th scope="col">Teléfono</th>
+              <th scope="col">Zona horaria</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-empresas">
+            <tr><td colspan="5">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Citas -->
+    <section id="citas" aria-labelledby="citas-heading">
+      <h2 id="citas-heading">Citas</h2>
+
+      <div class="card">
+        <h3>Filtrar citas</h3>
+        <form id="form-filtro-citas">
+          <div class="field">
+            <label for="filtro-empresa">Empresa</label>
+            <select id="filtro-empresa" name="tenantId">
+              <option value="">— Selecciona una empresa —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="filtro-fecha">Fecha</label>
+            <input id="filtro-fecha" name="date" type="date" />
+          </div>
+          <div class="field">
+            <label for="filtro-estado">Estado</label>
+            <select id="filtro-estado" name="status">
+              <option value="">Todos</option>
+              <option value="pending">Pendiente</option>
+              <option value="confirmed">Confirmada</option>
+              <option value="cancelled">Cancelada</option>
+              <option value="completed">Completada</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-secondary">Buscar citas</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Resultados</h3>
+        <div id="status-citas" role="status" aria-live="polite" aria-atomic="true"></div>
+        <table id="tabla-citas" aria-label="Listado de citas">
+          <caption class="sr-only">Citas filtradas por empresa, fecha y estado</caption>
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Cliente</th>
+              <th scope="col">Servicio</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Hora</th>
+              <th scope="col">Estado</th>
+              <th scope="col">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-citas">
+            <tr><td colspan="7">Selecciona una empresa para ver las citas.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Clientes -->
+    <section id="clientes" aria-labelledby="clientes-heading">
+      <h2 id="clientes-heading">Clientes</h2>
+
+      <div class="card">
+        <h3>Buscar clientes por empresa</h3>
+        <form id="form-filtro-clientes">
+          <div class="field">
+            <label for="filtro-empresa-clientes">Empresa</label>
+            <select id="filtro-empresa-clientes" name="tenantId">
+              <option value="">— Selecciona una empresa —</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-secondary">Ver clientes</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Lista de clientes</h3>
+        <div id="status-clientes" role="status" aria-live="polite" aria-atomic="true"></div>
+        <table id="tabla-clientes" aria-label="Listado de clientes">
+          <caption class="sr-only">Clientes registrados en la empresa seleccionada</caption>
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Nombre</th>
+              <th scope="col">Teléfono</th>
+              <th scope="col">Email</th>
+              <th scope="col">Registrado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-clientes">
+            <tr><td colspan="5">Selecciona una empresa para ver los clientes.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer role="contentinfo">
+    <p>WhatsApp Bot — Sistema de gestión de citas &copy; 2026</p>
+  </footer>
+
+  <div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>

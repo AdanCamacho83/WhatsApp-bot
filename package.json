@@ -1,0 +1,41 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Sistema web de gestión de citas que permite a empresas administrar sus agendamientos de manera eficiente. El sistema está diseñado para ser multi-tenant, donde cada empresa tiene su propio espacio aislado para gestionar clientes, citas y horarios de atención.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AdanCamacho83/WhatsApp-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/AdanCamacho83/WhatsApp-bot/issues"
+  },
+  "homepage": "https://github.com/AdanCamacho83/WhatsApp-bot#readme",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "node-cron": "^4.2.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
+}
